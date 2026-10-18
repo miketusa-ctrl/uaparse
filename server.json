@@ -3,7 +3,7 @@
   "name": "dev.workers.mike-tusa.uaparse/uaparse",
   "title": "UAParse",
   "description": "Parse a User-Agent: browser, OS, device, plus bot, search crawler, AI crawler and AI agent flags.",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "websiteUrl": "https://uaparse.mike-tusa.workers.dev/",
   "icons": [
     { "src": "https://uaparse.mike-tusa.workers.dev/favicon.svg", "mimeType": "image/svg+xml", "sizes": ["any"] }
