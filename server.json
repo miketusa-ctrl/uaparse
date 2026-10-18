@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.workers.mike-tusa.uaparse/uaparse",
+  "title": "UAParse",
+  "description": "Parse a User-Agent: browser, OS, device, plus bot, search crawler, AI crawler and AI agent flags.",
+  "version": "0.5.2",
+  "websiteUrl": "https://uaparse.mike-tusa.workers.dev/",
+  "icons": [
+    { "src": "https://uaparse.mike-tusa.workers.dev/favicon.svg", "mimeType": "image/svg+xml", "sizes": ["any"] }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://uaparse.mike-tusa.workers.dev/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Optional. 'Bearer up_live_…' (free API key, issued by email request) for higher limits. Works without a key.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

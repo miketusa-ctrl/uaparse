@@ -1,0 +1,22 @@
+{
+  "name": "uaparse",
+  "version": "0.5.2",
+  "private": true,
+  "description": "UAParse: User-Agent parsing + bot / search crawler / AI crawler / AI agent detection API, free web tool and remote MCP server (Cloudflare Worker)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ua-parser-js": "1.0.41"
+  },
+  "devDependencies": {
+    "node": "^22.23.3",
+    "wrangler": "^4.147.0"
+  },
+  "license": "MIT"
+}

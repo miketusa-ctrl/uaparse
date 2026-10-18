@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UAParse: free User-Agent parser &amp; bot / AI crawler detector</title>
+<meta name="description" content="Paste a User-Agent string (or detect yours). UAParse tells you the browser, OS, device, engine, and whether it is a known bot, search crawler, AI crawler (GPTBot, ClaudeBot, PerplexityBot, CCBot, Bytespider) or an AI agent acting for a user (ChatGPT-User, Claude-User, Perplexity-User, Google-Agent). Free web tool + JSON API.">
+<link rel="stylesheet" href="/style.css">
+<link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
+<link rel="service-desc" type="application/json" href="/openapi.json" title="OpenAPI 3.1">
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="brand" href="/">UAParse</a><nav><a href="/docs">API docs</a><a href="/docs#pricing">Pricing</a><a href="/privacy">Privacy</a></nav></div></header>
+<main class="wrap">
+  <h1>Parse a User-Agent</h1>
+  <p class="lead">Paste any User-Agent string, or detect the one your browser is sending. UAParse returns the <strong>browser</strong>, <strong>OS</strong>, <strong>device type</strong>, <strong>engine</strong>, and whether it is a known <strong>bot</strong>, <strong>search crawler</strong>, or <strong>AI crawler</strong> (GPTBot, ClaudeBot, PerplexityBot, CCBot, Google-Extended, Bytespider, … {{AI_COUNT}} on list {{LIST_VERSION}}), including <strong>AI agents acting for a user</strong> (ChatGPT-User, Claude-User, Perplexity-User, Google-Agent, …).</p>
+  <form id="f" class="check" action="/" method="post" autocomplete="off">
+    <label for="ua" class="sr">User-Agent string</label>
+    <textarea id="ua" name="ua" maxlength="2048" placeholder="Mozilla/5.0 … (or leave blank and click Detect mine)" spellcheck="false" required></textarea>
+    <div class="btns">
+      <button type="submit">Parse</button>
+      <button type="button" id="mine" class="secondary">Detect mine</button>
+    </div>
+  </form>
+  <p class="small muted">Free: about {{ANON_PER_MIN}} lookups per minute. Tip: paste a crawler UA from your access logs to see if it is an AI trainer or a search indexer.</p>
+  <div id="nojs">{{NOJS_RESULT}}</div>
+
+  <section id="out" class="result" hidden aria-live="polite">
+    <div class="verdict"><span id="badge" class="badge"></span><span id="vtext"></span></div>
+    <ul id="flags" class="flags"></ul>
+    <p id="note" class="sugg" hidden></p>
+    <p id="tok" class="small muted" hidden></p>
+    <p id="docs" class="small muted" hidden></p>
+    <details><summary>JSON</summary><pre id="raw"></pre></details>
+  </section>
+  <p id="err" class="err" hidden role="alert"></p>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ul>
+      <li><strong>Browser / OS / device / engine:</strong> parsed with <a href="https://github.com/faisalman/ua-parser-js" target="_blank" rel="noopener noreferrer">ua-parser-js</a> 1.0.41 (MIT). The AGPL 2.x line is not used.</li>
+      <li><strong>Bots &amp; crawlers:</strong> a curated list of {{BOT_COUNT}} known bots kept in this repo ({{AI_COUNT}} of them are AI crawlers). The first matching token wins; more specific names (Googlebot-Image, Applebot-Extended) come before the tokens they contain.</li>
+      <li><strong>AI purpose:</strong> when the operator documents it, we label an AI crawler as <code>training</code>, <code>search</code>, <code>user_fetch</code>, or <code>agent</code>.</li>
+      <li><strong>AI agents (acting for a user):</strong> {{AGENT_COUNT}} User-Agent names ({{AGENT_CURRENT_COUNT}} current plus the retired {{AGENT_RETIRED}}) that the operator's own docs describe as fetching or browsing on an individual user's request (ChatGPT-User, Claude-User, Perplexity-User, MistralAI-User, Meta-ExternalFetcher, Amzn-User, Google-Agent, …) get <code>is_ai_agent: true</code>. AI agents that browse in a real browser and publish no token (e.g. Meta Muse; Meta publishes no Muse User-Agent) are indistinguishable from people here. See <a href="/docs#agents">AI agents</a>. UAParse is independent and not affiliated with Meta, OpenAI, Google, Anthropic, Amazon, Perplexity or Mistral AI.</li>
+      <li><strong>No lookups:</strong> everything runs inside the Worker. UAParse does not resolve DNS, check IP ranges, or call any third party per request, so a match is never "verified" — anyone can spoof a User-Agent.</li>
+      <li><strong>robots.txt is a sibling product:</strong> to generate Allow/Disallow rules for these AI tokens, use <a href="{{ROBOTSGATE}}" target="_blank" rel="noopener noreferrer">RobotsGate</a>. UAParse does not build robots.txt.</li>
+    </ul>
+    <p>Wrongly flagged? <a href="mailto:{{CONTACT}}?subject=UAParse%20false%20positive">Report a false positive</a>.</p>
+  </section>
+
+  <section class="how">
+    <h2>API</h2>
+    <pre>curl -X POST -H "content-type: application/json" \
+  -d '{"ua":"Mozilla/5.0 … GPTBot/1.1"}' "https://&lt;host&gt;/v1/parse"
+curl "https://&lt;host&gt;/v1/parse"   # parses YOUR User-Agent</pre>
+    <p>API keys are issued by request during early access (free tier: 1,000 lookups/day); email <a href="mailto:{{CONTACT}}?subject=UAParse%20API%20key">{{CONTACT}}</a>. Bulk parse needs a key (free keys: up to 10 UAs per call). See the <a href="/docs">API docs</a>.</p>
+    <p class="small">Using an AI assistant or agent? UAParse is also a remote MCP server: see <a href="#agents">For AI agents</a>.</p>
+  </section>
+
+  <section id="pro" class="how">
+    <h2>UAParse Pro</h2>
+    <p><strong>${{PRO_PRICE}}/month.</strong> {{PRO_DAILY}} lookups per UTC day (free key: 1,000) and bulk parse up to {{PRO_BULK}} User-Agents per call (free key: 10). Cancel anytime.</p>
+    <p>After checkout, Polar emails you a license key (<code>UAPR-…</code>). Send it as <code>Authorization: Bearer UAPR-…</code> on the API or MCP endpoint; it works within about a minute.</p>
+    <p><a class="btn" href="{{PRO_CHECKOUT}}" target="_blank" rel="noopener noreferrer">Get UAParse Pro on Polar</a> · <a href="{{PRO_PORTAL}}" target="_blank" rel="noopener noreferrer">Manage or cancel</a></p>
+    <p class="small">Payment is handled by Polar (merchant of record). Questions: <a href="mailto:{{CONTACT}}?subject=UAParse%20Pro">{{CONTACT}}</a>.</p>
+  </section>
+
+  <section id="agents" class="how">
+    <h2>For AI agents (MCP)</h2>
+    <p>UAParse is also a remote <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener noreferrer">Model Context Protocol</a> (MCP) server, so AI assistants and agents can parse a User-Agent for you with the <code>parse_user_agent</code> tool. Most MCP clients accept this config; some use a different format (for example, VS Code uses a <code>servers</code> key). Clients with a settings screen just need the URL <code>https://uaparse.mike-tusa.workers.dev/mcp</code>.</p>
+    <pre><code id="mcp-config">{
+  "mcpServers": {
+    "uaparse": {
+      "type": "http",
+      "url": "https://uaparse.mike-tusa.workers.dev/mcp"
+    }
+  }
+}</code></pre>
+    <p class="small">Same limits as the API (about {{ANON_PER_MIN}} lookups per minute without a key; each tool call is one lookup). An API key goes in an <code>Authorization: Bearer</code> header. Bulk parsing stays in the JSON API. Machine-readable docs: <a href="/llms.txt">llms.txt</a> · <a href="/openapi.json">OpenAPI 3.1 spec</a> · MCP endpoint <code>POST /mcp</code> (Streamable HTTP, stateless JSON responses).</p>
+  </section>
+</main>
+<footer class="foot"><div class="wrap">UAParse v{{VERSION}} · list {{LIST_VERSION}} · parser {{PARSER}} · <a href="/docs">Docs</a> · <a href="#pro">Pro</a> · <a href="#agents">MCP</a> · <a href="/privacy">Privacy</a> · Contact: <a href="mailto:{{CONTACT}}">{{CONTACT}}</a></div></footer>
+<script src="/app.js" defer></script>
+</body>
+</html>

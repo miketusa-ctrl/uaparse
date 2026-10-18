@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UAParse API docs: User-Agent parsing and bot / AI crawler detection</title>
+<meta name="description" content="UAParse JSON API: GET/POST /v1/parse for one User-Agent, POST /v1/bulk for batches. Browser, OS, device, engine, bot, search crawler, AI crawler and AI agent flags.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="brand" href="/">UAParse</a><nav><a href="/docs">API docs</a><a href="/docs#pricing">Pricing</a><a href="/privacy">Privacy</a></nav></div></header>
+<main class="wrap">
+  <h1>API docs</h1>
+  <p class="lead">JSON over HTTPS. CORS is open (<code>*</code>). Errors are <code>{"error":{"code","message"}}</code> with a matching HTTP status. Version {{VERSION}}, bot list {{LIST_VERSION}} ({{BOT_COUNT}} bots, {{AI_COUNT}} AI crawlers, {{AGENT_COUNT}} of them AI agent names acting for a user: {{AGENT_CURRENT_COUNT}} current plus the retired {{AGENT_RETIRED}}), parser {{PARSER}}.</p>
+
+  <h2 id="parse">POST /v1/parse (recommended) · GET /v1/parse</h2>
+  <pre>curl -X POST -H "content-type: application/json" \
+  -d '{"ua":"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.1; +https://openai.com/gptbot"}' \
+  https://&lt;host&gt;/v1/parse
+
+curl "https://&lt;host&gt;/v1/parse?ua=Mozilla%2F5.0%20(compatible%3B%20ClaudeBot%2F1.0)"
+curl "https://&lt;host&gt;/v1/parse"            # no ua → parses the request's own User-Agent header</pre>
+  <ul>
+    <li>Body: <code>{"ua":"…"}</code>, <code>Content-Type: application/json</code>, at most <strong>8 KB</strong> (413 above). Omitting <code>ua</code> (e.g. <code>{}</code>) parses the caller's own User-Agent.</li>
+    <li><code>ua</code> must be 1–2,048 characters.</li>
+    <li>Response header <code>X-Cache: HIT|MISS</code> shows the per-isolate result cache (keyed by SHA-256 of the UA).</li>
+  </ul>
+  <p>Response:</p>
+  <pre>{
+  "ua": "Mozilla/5.0 … GPTBot/1.1; +https://openai.com/gptbot",
+  "browser": { "name": "WebKit", "version": "537.36", "major": "537" },
+  "engine":  { "name": "WebKit", "version": "537.36" },
+  "os":      { "name": null, "version": null },
+  "device":  { "type": "bot", "vendor": null, "model": null },
+  "cpu":     { "architecture": null },
+  "is_bot": true,
+  "is_ai_crawler": true,
+  "is_ai_agent": false,
+  "is_search_crawler": false,
+  "bot": {
+    "is_bot": true, "is_ai_crawler": true, "is_ai_agent": false, "is_search_crawler": false,
+    "category": "ai_crawler", "category_label": "AI crawler",
+    "name": "GPTBot", "operator": "OpenAI", "ai_purpose": "training", "ai_agent_kind": null,
+    "robots_token": "GPTBot", "token_only": false,
+    "info_url": "https://developers.openai.com/api/docs/bots",
+    "match": "list", "verified": false
+  },
+  "list_version": "{{LIST_VERSION}}",
+  "parser": "{{PARSER}}"
+}</pre>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td><code>device.type</code></td><td><code>desktop</code>, <code>mobile</code>, <code>tablet</code>, <code>smarttv</code>, <code>console</code>, <code>wearable</code>, <code>xr</code>, <code>embedded</code>, <code>bot</code> (any detected bot or HTTP client) or <code>unknown</code>.</td></tr>
+    <tr><td><code>bot.category</code></td><td><code>ai_crawler</code>, <code>search_crawler</code>, <code>ads_crawler</code>, <code>seo_crawler</code>, <code>social_preview</code>, <code>feed_reader</code>, <code>monitoring</code>, <code>archiver</code>, <code>security_scanner</code>, <code>headless_browser</code>, <code>http_client</code>, <code>other_crawler</code>, <code>unknown_bot</code> (generic "bot/crawler/spider" heuristic, not on the list).</td></tr>
+    <tr><td><code>bot.ai_purpose</code></td><td><code>training</code> (model training / datasets), <code>search</code> (AI search index), <code>user_fetch</code> (a user asked an assistant to open the page), <code>agent</code> (AI agent / scraping service).</td></tr>
+    <tr><td><code>is_ai_agent</code> / <code>bot.is_ai_agent</code></td><td><code>true</code> when the operator's own documentation says this User-Agent acts live for an individual end user of an AI assistant or agent (see <a href="#agents">AI agents</a>). Always a subset of <code>is_ai_crawler</code>. Added in v0.2.0; all other fields keep their v0.1 meaning.</td></tr>
+    <tr><td><code>bot.ai_agent_kind</code></td><td><code>fetch</code> (opens the page(s) a user's request needs: ChatGPT-User, Claude-User, …), <code>browsing</code> (navigates sites and performs actions on the user's request: Google-Agent), or <code>null</code>.</td></tr>
+    <tr><td><code>bot.token_only</code></td><td><code>true</code> for names the operator documents only as robots.txt tokens (Google-Extended, Applebot-Extended): real requests use another UA (Googlebot, Applebot).</td></tr>
+    <tr><td><code>bot.match</code></td><td><code>list</code> (curated list) or <code>heuristic</code>.</td></tr>
+    <tr><td><code>bot.verified</code></td><td>Always <code>false</code>. UAParse never checks IP ranges or reverse DNS, so any UA can be spoofed.</td></tr>
+  </table>
+
+  <h2 id="bulk">POST /v1/bulk (API key)</h2>
+  <pre>curl -X POST -H "Authorization: Bearer up_live_…" -H "content-type: application/json" \
+  -d '{"uas":["Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)","curl/8.5.0"]}' \
+  https://&lt;host&gt;/v1/bulk</pre>
+  <ul>
+    <li>Needs an API key (401 <code>api_key_required</code> without one). Body at most <strong>64 KB</strong>; at most <strong>{{MAX_BATCH}}</strong> UAs per call. Free keys may send up to <strong>10</strong> per call (403 <code>plan_bulk_limit</code> above that); <a href="#pricing">Pro</a> license keys up to <strong>{{PRO_BULK}}</strong>.</li>
+    <li>Each UA counts as one lookup against the key's daily quota; the call is all-or-nothing.</li>
+    <li>Response: <code>{"count", "list_version", "results":[…same object as /v1/parse…]}</code>.</li>
+  </ul>
+
+  <h2 id="other">Other endpoints</h2>
+  <ul>
+    <li><code>GET /v1/bots</code>: the curated bot list (name, category, operator, AI purpose, <code>is_ai_agent</code>, <code>ai_agent_kind</code>, robots token, docs link). Not counted.</li>
+    <li><code>GET /v1/meta</code>: version, build, list version, counts (<code>bot_count</code>, <code>ai_crawler_count</code>, <code>ai_agent_count</code>) and limits.</li>
+    <li><code>GET /health</code>: <code>{"ok":true,…}</code>.</li>
+    <li><code>POST /mcp</code>: remote MCP server for AI agents (tool <code>parse_user_agent</code>, same keys and limits as <code>/v1/parse</code>); see <a href="/#agents">For AI agents</a>. Machine-readable: <a href="/llms.txt">llms.txt</a> · <a href="/openapi.json">OpenAPI 3.1 spec</a>.</li>
+  </ul>
+
+  <h2 id="agents">AI agents acting for a user</h2>
+  <p><strong>Rule:</strong> <code>is_ai_agent</code> is <code>true</code> only for User-Agents that the operator's own documentation describes as acting live for an individual end user of an AI assistant or agent product. That covers both user-initiated fetchers (<code>ai_purpose: user_fetch</code>, <code>ai_agent_kind: fetch</code>) and agents that navigate and act (<code>ai_purpose: agent</code>, <code>ai_agent_kind: browsing</code>). It is <code>false</code> for bulk or scheduled crawls (training, search indexing), for business-side crawlers labelled <code>agent</code> (Google-CloudVertexBot, FirecrawlAgent), and for legacy tokens the operator no longer documents (Claude-Web, cohere-ai).</p>
+  <p class="small">{{AGENT_COUNT}} names: {{AGENT_CURRENT_COUNT}} current plus the retired {{AGENT_RETIRED}} name (Google now documents Google-GeminiNotebook; the old name is still detected so older logs classify correctly).</p>
+  <table>
+    <tr><th>User-Agent token</th><th>Operator</th><th>Kind</th><th>Operator docs</th></tr>
+    <tr><td>ChatGPT-User</td><td>OpenAI</td><td>fetch</td><td><a href="https://developers.openai.com/api/docs/bots" target="_blank" rel="noopener noreferrer">developers.openai.com/api/docs/bots</a></td></tr>
+    <tr><td>Claude-User</td><td>Anthropic</td><td>fetch</td><td><a href="https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler" target="_blank" rel="noopener noreferrer">support.claude.com</a></td></tr>
+    <tr><td>Perplexity-User</td><td>Perplexity</td><td>fetch</td><td><a href="https://docs.perplexity.ai/docs/resources/perplexity-crawlers" target="_blank" rel="noopener noreferrer">docs.perplexity.ai</a></td></tr>
+    <tr><td>MistralAI-User</td><td>Mistral AI</td><td>fetch</td><td><a href="https://docs.mistral.ai/robots" target="_blank" rel="noopener noreferrer">docs.mistral.ai/robots</a></td></tr>
+    <tr><td>meta-externalfetcher</td><td>Meta</td><td>fetch</td><td><a href="https://developers.facebook.com/docs/sharing/webmasters/web-crawlers" target="_blank" rel="noopener noreferrer">developers.facebook.com</a></td></tr>
+    <tr><td>Amzn-User</td><td>Amazon</td><td>fetch</td><td><a href="https://developer.amazon.com/amazonbot" target="_blank" rel="noopener noreferrer">developer.amazon.com/amazonbot</a></td></tr>
+    <tr><td>Google-GeminiNotebook</td><td>Google</td><td>fetch</td><td><a href="https://developers.google.com/crawling/docs/crawlers-fetchers/google-user-triggered-fetchers#gemini-notebook" target="_blank" rel="noopener noreferrer">Google user-triggered fetchers</a></td></tr>
+    <tr><td>Google-NotebookLM (retired name, still detected)</td><td>Google</td><td>fetch</td><td><a href="https://developers.google.com/crawling/docs/crawlers-fetchers/google-user-triggered-fetchers#gemini-notebook" target="_blank" rel="noopener noreferrer">Google user-triggered fetchers</a></td></tr>
+    <tr><td>Google-Agent</td><td>Google</td><td>browsing</td><td><a href="https://developers.google.com/crawling/docs/crawlers-fetchers/google-user-triggered-fetchers#google-agent" target="_blank" rel="noopener noreferrer">Google user-triggered fetchers</a></td></tr>
+  </table>
+  <p><strong>What UAParse cannot see:</strong> many personal agents browse in a real browser and publish no User-Agent token. Meta says its Muse agent uses "a real up-to-date Chromium based browser"; as of {{LIST_VERSION}} Meta publishes no Muse User-Agent. We also found no operator-published User-Agent token for ChatGPT Atlas agent mode or Perplexity Comet. These requests are reported as a normal human browser. That is a limit of User-Agent parsing, not a bug. UAParse is independent and not affiliated with Meta, OpenAI, Google, Anthropic, Amazon, Perplexity or Mistral AI.</p>
+  <p><strong>Signed agents (not checked):</strong> some operators identify agent traffic with HTTP Message Signatures (RFC 9421, the IETF "Web Bot Auth" work) instead of a User-Agent token. OpenAI's ChatGPT cloud browser sends <code>Signature-Agent: "https://chatgpt.com"</code>, and Google is experimenting with the <code>https://agent.bot.goog</code> identity. Meta, Sierra and partners announced the Personal Agent Protocol (OAuth-based) on 2026-10-06, but its v0.1 specification has not been published yet and defines no User-Agent token. UAParse only reads the User-Agent string, so it does not verify signatures or OAuth sessions, and <code>verified</code> stays <code>false</code>.</p>
+
+  <h2 id="limits">Limits</h2>
+  <table>
+    <tr><th>Who</th><th>Limit</th></tr>
+    <tr><td>No API key (web tool + API)</td><td>about {{ANON_PER_MIN}} lookups per minute per IP</td></tr>
+    <tr><td>Free API key</td><td>1,000 lookups per UTC day; about 120 requests/min burst; bulk up to 10 per call</td></tr>
+    <tr><td>Pro license key</td><td>{{PRO_DAILY}} lookups per UTC day; about 120 requests/min burst; bulk up to {{PRO_BULK}} per call; not subject to the shared daily capacity</td></tr>
+    <tr><td>Anonymous and free keys</td><td>A shared daily capacity; when it is reached you get 429 <code>daily_capacity_reached</code> until 00:00 UTC</td></tr>
+  </table>
+  <p>Keyed responses carry <code>X-Quota-Limit</code>, <code>X-Quota-Remaining</code> and <code>X-Quota-Reset</code>. Error codes: 400 <code>missing_ua</code>/<code>empty_ua</code>/<code>ua_too_long</code>/<code>invalid_body</code>/<code>invalid_json</code>/<code>too_many_uas</code>/<code>invalid_ua_item</code>, 401 <code>invalid_api_key</code>/<code>api_key_required</code>, 403 <code>plan_bulk_limit</code>, 405, 413 <code>body_too_large</code>, 415, 429 <code>rate_limited</code>/<code>quota_exceeded</code>/<code>daily_capacity_reached</code>/<code>too_many_failed_auth</code>, 503.</p>
+
+  <h2 id="pricing">Pricing</h2>
+  <p><strong>Free</strong>: web tool, anonymous API (about {{ANON_PER_MIN}}/min), free key with 1,000 lookups/day. Keys are issued by request during early access: <a href="mailto:{{CONTACT}}?subject=UAParse%20API%20key">{{CONTACT}}</a>.</p>
+  <p id="pro"><strong>Pro</strong>: ${{PRO_PRICE}}/month. {{PRO_DAILY}} lookups/day and bulk up to {{PRO_BULK}} UAs per call. Cancel anytime. <a href="{{PRO_CHECKOUT}}" target="_blank" rel="noopener noreferrer">Buy on Polar</a> · <a href="{{PRO_PORTAL}}" target="_blank" rel="noopener noreferrer">Manage or cancel</a>.</p>
+  <p>Polar emails a license key (<code>UAPR-…</code>) after checkout. Use it exactly like an API key: <code>Authorization: Bearer UAPR-…</code> on <code>/v1/parse</code>, <code>/v1/bulk</code> and <code>/mcp</code>. A cancelled, refunded or expired subscription stops working with 401 <code>invalid_api_key</code>. Payment is processed by Polar; UAParse never sees card details.</p>
+
+  <h2 id="limitations">Limitations</h2>
+  <ul>
+    <li>User-Agent strings are self-reported. A bot can claim to be Chrome and a person can claim to be GPTBot. Use IP / reverse-DNS verification from the operator's docs before you trust a crawler claim.</li>
+    <li>Browsers are reducing UA detail (Chrome UA reduction): Windows 11 reports "Windows NT 10.0", macOS versions freeze at 10.15.7, Android device models show as "K". UAParse reports what the string contains.</li>
+    <li>The bot list is curated and dated ({{LIST_VERSION}}). New crawlers are missed until added; a generic heuristic flags unlisted UAs containing bot / crawler / spider as <code>unknown_bot</code>.</li>
+    <li>AI agents that browse in a real browser and publish no token (e.g. Meta Muse; Meta publishes no Muse User-Agent) are indistinguishable from people here; see <a href="#agents">AI agents</a>. UAParse is independent and not affiliated with Meta, OpenAI, Google, Anthropic, Amazon, Perplexity or Mistral AI.</li>
+    <li>For bots, ua-parser-js may still report an engine or "browser" (e.g. WebKit) taken from the string.</li>
+  </ul>
+
+  <h2 id="privacy">Privacy</h2>
+  <p>See <a href="/privacy">/privacy</a>. Short version: no logs, no cookies, no analytics; User-Agent strings are never stored with IP addresses.</p>
+</main>
+<footer class="foot"><div class="wrap">UAParse v{{VERSION}} · <a href="/">Home</a> · <a href="/privacy">Privacy</a> · Contact: <a href="mailto:{{CONTACT}}">{{CONTACT}}</a></div></footer>
+</body>
+</html>

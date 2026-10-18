@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UAParse privacy</title>
+<meta name="description" content="UAParse privacy note: no logs, no cookies, no analytics, and User-Agent strings are never stored with IP addresses.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="brand" href="/">UAParse</a><nav><a href="/docs">API docs</a><a href="/docs#pricing">Pricing</a><a href="/privacy">Privacy</a></nav></div></header>
+<main class="wrap">
+  <h1 id="privacy">Privacy</h1>
+  <ul>
+    <li><strong>No storage of User-Agents with IPs.</strong> This applies to every tier, Pro included. UAParse parses the string in memory and returns the result. It does not write User-Agent strings to any database, log or analytics tool, and never stores them next to an IP address.</li>
+    <li><strong>Short-lived rate-limit counters.</strong> To enforce the free per-minute limit, Cloudflare's rate-limiting feature keeps a counter keyed by your IP address for about 60 seconds. It holds a number, not your User-Agent.</li>
+    <li><strong>In-memory result cache.</strong> Parse results are cached in the Worker's memory, keyed by a SHA-256 hash of the User-Agent, so repeat lookups are fast. The cache holds no IP or API key, is never written to disk or storage, and disappears when the Worker instance is recycled.</li>
+    <li><strong>API keys.</strong> Only a SHA-256 hash of each key is stored (Cloudflare Workers KV). Usage counters per key per UTC day are kept in a Cloudflare Durable Object for about two days. They contain counts only.</li>
+    <li><strong>RapidAPI (only for calls to <code>/rapidapi/v1/*</code>).</strong> If you use UAParse through the <a href="https://rapidapi.com/" target="_blank" rel="noopener noreferrer">RapidAPI</a> marketplace, RapidAPI is a processor for those calls: it handles your account, API key, subscription, billing and usage counting, and forwards each request to UAParse under its own privacy policy. UAParse receives the User-Agent strings you send plus RapidAPI's username and plan headers; it uses a one-way hash of the username only for per-minute rate limiting and stores nothing else. Direct calls to <code>/v1</code> and <code>/mcp</code> do not involve RapidAPI.</li>
+    <li><strong>UAParse Pro payments.</strong> Pro subscriptions are sold and billed by <a href="https://polar.sh/" target="_blank" rel="noopener noreferrer">Polar</a> (merchant of record), which processes your payment and email address under its own privacy policy. UAParse never receives card details.</li>
+    <li><strong>Pro license keys.</strong> Polar issues the license key. Polar notifies a small companion service run by the UAParse operator, which stores the key with its status, plan, expiry and Polar's customer and subscription IDs (no name, email or payment data) in Cloudflare Workers KV so UAParse can check it. UAParse only reads that record; it never logs the key, and its usage counter uses a one-way hash of the key. Revoked or expired keys stop working.</li>
+    <li><strong>No logs, cookies or analytics.</strong> Cloudflare Workers Logs are turned off for this service, there are no cookies, and the page loads no third-party scripts.</li>
+    <li><strong>Infrastructure.</strong> UAParse runs on Cloudflare Workers. Cloudflare processes requests as our infrastructure provider.</li>
+  </ul>
+  <p>Questions or deletion requests: <a href="mailto:{{CONTACT}}?subject=UAParse%20privacy">{{CONTACT}}</a>.</p>
+</main>
+<footer class="foot"><div class="wrap">UAParse v{{VERSION}} · <a href="/">Home</a> · <a href="/docs">Docs</a> · Contact: <a href="mailto:{{CONTACT}}">{{CONTACT}}</a></div></footer>
+</body>
+</html>

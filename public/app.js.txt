@@ -1,0 +1,93 @@
+// UAParse web checker. No third-party scripts, no cookies, no analytics.
+(function () {
+  'use strict';
+  var ROBOTSGATE = (document.querySelector('a[href*="robotsgate"]') || { href: 'https://robotsgate.mike-tusa.workers.dev' }).href;
+  var f = document.getElementById('f');
+  var ua = document.getElementById('ua');
+  var out = document.getElementById('out');
+  var err = document.getElementById('err');
+  var nojs = document.getElementById('nojs');
+  // "For AI agents" config: same JSON as the static snippet, with this deployment's origin (textContent, no HTML).
+  var mcpCfg = document.getElementById('mcp-config');
+  if (mcpCfg) mcpCfg.textContent = JSON.stringify({ mcpServers: { uaparse: { type: 'http', url: location.origin + '/mcp' } } }, null, 2);
+  var PURPOSE = {
+    training: 'Collects pages to train AI models or build datasets.',
+    search: 'Indexes pages for an AI search / answer engine.',
+    user_fetch: 'Fetches a page because a user asked an AI assistant to.',
+    agent: 'An AI agent or scraping service acting for a customer.'
+  };
+  var AGENT_KIND = {
+    fetch: 'An AI assistant opening this page because its user asked it to (not a bulk crawl).',
+    browsing: 'An AI agent browsing and taking actions on its user\'s request.'
+  };
+  function el(tag, text, cls) { var e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; }
+  function badgeOf(r) {
+    if (r.is_ai_agent) return ['warn', 'AI agent (acting for a user)', (r.bot.name || 'AI agent') + (r.bot.operator ? ' (' + r.bot.operator + ')' : '') + '. ' + (AGENT_KIND[r.bot.ai_agent_kind] || '')];
+    if (r.is_ai_crawler) return ['warn', 'AI crawler', (r.bot.name || 'AI crawler') + (r.bot.operator ? ' (' + r.bot.operator + ')' : '') + '. ' + (PURPOSE[r.bot.ai_purpose] || '')];
+    if (r.is_search_crawler) return ['info', 'Search crawler', (r.bot.name || 'Search crawler') + (r.bot.operator ? ' (' + r.bot.operator + ')' : '') + '.'];
+    if (r.is_bot) return ['info', r.bot.name || (r.bot.category_label || 'Bot'), r.bot.operator ? ('Operator: ' + r.bot.operator + '.') : 'Looks like a bot or automated client.'];
+    return ['good', 'Human browser', 'Not on our bot / crawler list.'];
+  }
+  function show(r) {
+    var v = badgeOf(r);
+    var badge = document.getElementById('badge');
+    badge.textContent = v[1]; badge.className = 'badge ' + v[0];
+    document.getElementById('vtext').textContent = v[2].trim();
+    var flags = document.getElementById('flags'); flags.textContent = '';
+    [
+      ['Browser', [r.browser.name, r.browser.version].filter(Boolean).join(' ') || '—'],
+      ['OS', [r.os.name, r.os.version].filter(Boolean).join(' ') || '—'],
+      ['Device', r.device.type],
+      ['Engine', [r.engine.name, r.engine.version].filter(Boolean).join(' ') || '—'],
+      ['Bot', r.is_bot ? 'yes' : 'no'],
+      ['AI crawler', r.is_ai_crawler ? 'yes' : 'no'],
+      ['AI agent', r.is_ai_agent ? 'yes' : 'no'],
+      ['Search crawler', r.is_search_crawler ? 'yes' : 'no']
+    ].forEach(function (p) {
+      var li = el('li'); li.appendChild(el('span', p[0]));
+      var cls = p[1] === 'yes' ? 'y' : (p[1] === 'no' ? 'n' : '');
+      li.appendChild(el('strong', p[1], cls)); flags.appendChild(li);
+    });
+    var note = document.getElementById('note');
+    if (r.is_ai_crawler) {
+      note.textContent = ''; note.appendChild(document.createTextNode('Want robots.txt rules for AI crawlers? Try '));
+      var a = el('a', 'RobotsGate'); a.href = ROBOTSGATE; a.target = '_blank'; a.rel = 'noopener noreferrer'; note.appendChild(a); note.appendChild(document.createTextNode('.'));
+      note.hidden = false;
+    } else note.hidden = true;
+    var docs = document.getElementById('docs');
+    if (r.bot && r.bot.info_url && /^https:\/\//.test(r.bot.info_url)) {
+      docs.textContent = ''; docs.appendChild(document.createTextNode('Operator documentation: '));
+      var d = el('a', r.bot.info_url); d.href = r.bot.info_url; d.target = '_blank'; d.rel = 'noopener noreferrer'; docs.appendChild(d);
+      docs.appendChild(document.createTextNode(' (UA not verified).'));
+      docs.hidden = false;
+    } else docs.hidden = true;
+    var tok = document.getElementById('tok');
+    if (r.bot && r.bot.token_only) {
+      tok.textContent = (r.bot.name || 'This token') + ' is documented as a robots.txt token only (requests usually use another User-Agent).';
+      tok.hidden = false;
+    } else tok.hidden = true;
+    document.getElementById('raw').textContent = JSON.stringify(r, null, 2);
+    out.hidden = false; err.hidden = true;
+    if (nojs) nojs.hidden = true;
+  }
+  function fail(msg) { err.textContent = msg; err.hidden = false; out.hidden = true; }
+  function run(v, detectMine) {
+    var body = detectMine ? '{}' : JSON.stringify({ ua: v });
+    fetch('/v1/parse', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: body })
+      .then(function (res) { return res.json().then(function (j) { return { s: res.status, j: j }; }); })
+      .then(function (x) {
+        if (x.s === 200) {
+          if (detectMine && x.j.ua) ua.value = x.j.ua;
+          show(x.j);
+        } else fail((x.j && x.j.error && x.j.error.message) || ('Error ' + x.s));
+      })
+      .catch(function () { fail('Network error. Please try again.'); });
+  }
+  f.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var v = (ua.value || '').trim();
+    if (!v) { fail('Paste a User-Agent string, or click Detect mine.'); return; }
+    run(v, false);
+  });
+  document.getElementById('mine').addEventListener('click', function () { run('', true); });
+})();
