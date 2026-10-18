@@ -11,6 +11,7 @@ import { VERSION } from './lib/version.js';
 import { handleMcp, MCP_CORS } from './lib/mcp.js';
 import { llmsTxt, openApiSpec, GLAMA_JSON } from './lib/agentdocs.js';
 import { isRapidApiPath, handleRapidApi } from './lib/rapidapi.js';
+import { countVisitor } from './lib/visitors.js';
 
 export { clearParseCache, VERSION, PRO_CHECKOUT_URL };
 export const MAX_PARSE_BODY = 8 * 1024; // POST /v1/parse
@@ -308,6 +309,12 @@ function validateUa(ua) {
   return { ua };
 }
 
+// v0.5.3 daily unique visitors (LISTING-PROTOCOL step 3): GET /, the no-JS form POST /, the API routes /v1/* (not
+// /v1/meta) and POST /mcp. Never HEAD, health, docs, privacy, static files, agent docs, glama.json or /rapidapi/*
+// (RapidAPI calls arrive from RapidAPI's servers, not the visitor).
+export const COUNTED = (path, method) => (method === 'GET' && path === '/') || (method === 'POST' && path === '/')
+  || ((method === 'GET' || method === 'POST') && path.startsWith('/v1/') && path !== '/v1/meta') || (method === 'POST' && path === '/mcp');
+
 export function createApp({ html = '', docs = '', privacy = '', js = '', css = '' } = {}) {
   const pageCache = new Map();
   const page = (name, tpl, env) => {
@@ -483,6 +490,10 @@ export function createApp({ html = '', docs = '', privacy = '', js = '', css = '
   }
 
   return async function handle(request, env = {}, ctx = {}) {
+    // Fire-and-forget (ctx.waitUntil); off unless the VISITOR_SALT secret is set; can never change the response.
+    try {
+      if (COUNTED(new URL(request.url).pathname, request.method)) countVisitor(request, env, ctx, ipBucket(request.headers.get('cf-connecting-ip') || 'unknown'));
+    } catch { /* ignore */ }
     let res;
     try {
       res = await route(request, env, ctx);
