@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>UAParse privacy</title>
-<meta name="description" content="UAParse privacy note: no logs, no cookies, no analytics, and User-Agent strings are never stored with IP addresses.">
+<meta name="description" content="UAParse privacy note: no logs, no cookies, no third-party analytics, and User-Agent strings are never stored with IP addresses.">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -19,7 +19,8 @@
     <li><strong>RapidAPI (only for calls to <code>/rapidapi/v1/*</code>).</strong> If you use UAParse through the <a href="https://rapidapi.com/" target="_blank" rel="noopener noreferrer">RapidAPI</a> marketplace, RapidAPI is a processor for those calls: it handles your account, API key, subscription, billing and usage counting, and forwards each request to UAParse under its own privacy policy. UAParse receives the User-Agent strings you send plus RapidAPI's username and plan headers; it uses a one-way hash of the username only for per-minute rate limiting and stores nothing else. Direct calls to <code>/v1</code> and <code>/mcp</code> do not involve RapidAPI.</li>
     <li><strong>UAParse Pro payments.</strong> Pro subscriptions are sold and billed by <a href="https://polar.sh/" target="_blank" rel="noopener noreferrer">Polar</a> (merchant of record), which processes your payment and email address under its own privacy policy. UAParse never receives card details.</li>
     <li><strong>Pro license keys.</strong> Polar issues the license key. Polar notifies a small companion service run by the UAParse operator, which stores the key with its status, plan, expiry and Polar's customer and subscription IDs (no name, email or payment data) in Cloudflare Workers KV so UAParse can check it. UAParse only reads that record; it never logs the key, and its usage counter uses a one-way hash of the key. Revoked or expired keys stop working.</li>
-    <li><strong>No logs, cookies or analytics.</strong> Cloudflare Workers Logs are turned off for this service, there are no cookies, and the page loads no third-party scripts.</li>
+    <li><strong>Daily unique visitor count.</strong> To count unique visitors per day, UAParse keeps a salted, daily-rotating hash of your network address (IPv6 grouped by /64) in Cloudflare Workers KV for up to 9 days. It is counted only on the homepage, the API (<code>/v1/*</code>) and <code>POST /mcp</code>, not on RapidAPI calls. Your IP address itself is not stored, and the hash is never stored with a User-Agent.</li>
+    <li><strong>No logs, cookies or third-party analytics.</strong> Cloudflare Workers Logs are turned off for this service, there are no cookies, and the page loads no third-party scripts.</li>
     <li><strong>Infrastructure.</strong> UAParse runs on Cloudflare Workers. Cloudflare processes requests as our infrastructure provider.</li>
   </ul>
   <p>Questions or deletion requests: <a href="mailto:{{CONTACT}}?subject=UAParse%20privacy">{{CONTACT}}</a>.</p>
