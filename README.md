@@ -12,13 +12,26 @@ Parse a User-Agent: browser, OS, device, plus bot, search crawler, AI crawler an
 
 UAParse is a remote MCP server (Streamable HTTP) at `https://uaparse.mike-tusa.workers.dev/mcp`. Tools: `parse_user_agent`.
 
-Cursor, Cline and Windsurf accept this config:
+Cursor and Windsurf accept this config:
 
 ```json
 {
   "mcpServers": {
     "uaparse": {
       "type": "http",
+      "url": "https://uaparse.mike-tusa.workers.dev/mcp"
+    }
+  }
+}
+```
+
+Cline (MCP Servers > Remote Servers, or `cline_mcp_settings.json`) needs `"type": "streamableHttp"`:
+
+```json
+{
+  "mcpServers": {
+    "uaparse": {
+      "type": "streamableHttp",
       "url": "https://uaparse.mike-tusa.workers.dev/mcp"
     }
   }
@@ -41,6 +54,8 @@ npx wrangler@4 dev      # local dev server
 ```
 
 `wrangler.toml` is a template: create your own KV namespaces / D1 databases / rate-limit namespaces and replace the `<PLACEHOLDER>` values before `npx wrangler@4 deploy`. Any secrets the Worker reads go in `wrangler secret put` (or `.dev.vars` locally), never in the repo.
+
+Optional Worker secrets (leave unset if you do not need them): `RAPIDAPI_PROXY_SECRET` (only needed if you sell the API through RapidAPI; it must match the X-RapidAPI-Proxy-Secret header RapidAPI adds).
 
 ## Third-party data
 
