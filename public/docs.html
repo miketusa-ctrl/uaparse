@@ -121,7 +121,7 @@ curl "https://&lt;host&gt;/v1/parse"            # no ua → parses the request's
   </ul>
 
   <h2 id="privacy">Privacy</h2>
-  <p>See <a href="/privacy">/privacy</a>. Short version: no logs, no cookies, no analytics; User-Agent strings are never stored with IP addresses.</p>
+  <p>See <a href="/privacy">/privacy</a>. Short version: no logs, no cookies, no third-party analytics; User-Agent strings are never stored with IP addresses. A salted, daily-rotating hash of your network address (kept up to 9 days, never your IP) counts unique visitors per day.</p>
 </main>
 <footer class="foot"><div class="wrap">UAParse v{{VERSION}} · <a href="/">Home</a> · <a href="/privacy">Privacy</a> · Contact: <a href="mailto:{{CONTACT}}">{{CONTACT}}</a></div></footer>
 </body>
